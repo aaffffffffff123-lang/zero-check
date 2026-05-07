@@ -267,7 +267,8 @@
 
   let rawData = []; let zoneItems = [];
   let currentChamber = '', currentZone = '', currentIndex = 0;
-  let originalDate = '', originalQty = 0, snapBase64 = '';
+  // [수정] originalDateType 변수 추가
+  let originalDate = '', originalDateType = 'exp', originalQty = 0, snapBase64 = '';
 
   // 스캔 검증 상태
   let verifyState = 'pending'; // pending | ok | fail
@@ -373,11 +374,13 @@
     document.getElementById('detail-date').value = d;
     originalDate = d;
 
-    // [추가] 라디오 버튼 자동 선택
+  // [수정] 라디오 버튼 자동 선택 및 원본 타입 저장
     if (item.mfgDate && !item.expDate) {
       document.querySelector('input[name="dateType"][value="mfg"]').checked = true;
+      originalDateType = 'mfg';
     } else {
-      document.querySelector('input[name="dateType"][value="exp"]').checked = true; // 기본은 기한
+      document.querySelector('input[name="dateType"][value="exp"]').checked = true;
+      originalDateType = 'exp';
     }
 
 
@@ -399,16 +402,30 @@
   function checkChanges() {
     const currentQty = parseInt(document.getElementById('detail-qty').value) || 0;
     const currentDate = document.getElementById('detail-date').value;
-    const isChanged = (currentQty > 0 || currentDate !== originalDate);
+    // [추가] 현재 선택된 라디오 버튼 값 가져오기
+    const currentType = document.querySelector('input[name="dateType"]:checked').value;
+    
+    // [수정] 타입이 변경된 경우도 isChanged에 포함
+    const isChanged = (currentQty > 0 || currentDate !== originalDate || currentType !== originalDateType);
     
     document.getElementById('btn-empty').style.display = isChanged ? 'none' : 'block';
     document.getElementById('btn-save').style.display = isChanged ? 'block' : 'none';
     document.getElementById('share-area').style.display = isChanged ? 'block' : 'none';
 
-    // 변경 안 됐으면 카메라 끄기 (배터리/리소스)
     if (!isChanged && camRunning) stopVerifyCam();
 
     updateSaveBtnEnabled();
+  }
+
+  function updateSaveBtnEnabled() {
+    const btn = document.getElementById('btn-save');
+    const currentQty = parseInt(document.getElementById('detail-qty').value) || 0;
+    const currentDate = document.getElementById('detail-date').value;
+    const currentType = document.querySelector('input[name="dateType"]:checked').value; // [추가]
+    
+    // [수정] 여기도 동일하게 로직 반영
+    const isChanged = (currentQty > 0 || currentDate !== originalDate || currentType !== originalDateType);
+    btn.disabled = !(isChanged && verifyState === 'ok');
   }
 
   function updateSaveBtnEnabled() {
@@ -596,25 +613,27 @@
   }
 
   // ========== 저장 / 공유 ==========
-  function processItem(hasPhysicalStock) {
+ function processItem(hasPhysicalStock) {
     const item = zoneItems[currentIndex];
     const newQty = parseInt(document.getElementById('detail-qty').value) || 0;
     const newDate = document.getElementById('detail-date').value;
 
-    // 수정됨인데 검증 안 됐으면 차단 (이중 안전장치)
     if (hasPhysicalStock && verifyState !== 'ok') {
       showToast('상품코드 스캔 확인을 먼저 해주세요', 'danger');
       return;
     }
 
-const dateTypeObj = document.querySelector('input[name="dateType"]:checked');
+    const dateTypeObj = document.querySelector('input[name="dateType"]:checked');
     const selectedDateType = dateTypeObj ? dateTypeObj.value : 'exp';
+    
+    // [수정] 날짜나 타입 둘 중 하나라도 다르면 날짜 변경으로 처리
+    const isDateUpdated = (newDate !== originalDate || selectedDateType !== originalDateType);
     
     const payload = {
       rowIndex: item.rowIndex,
       hasPhysicalStock: hasPhysicalStock,
       qty: newQty,
-      isDateChanged: (newDate !== originalDate),
+      isDateChanged: isDateUpdated, // [수정] isDateUpdated 변수 사용
       newDate: newDate,
       dateType: selectedDateType,
       snapBase64: snapBase64,
