@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>0개 조사</title>
+<style>
+  :root {
+    --bg: #f8fafc; --surface: #ffffff; --text: #0f172a; --text-muted: #475569;
+    --border: #e2e8f0; --primary: #4f46e5; --primary-dark: #4338ca; 
+    --primary-light: #eef2ff; --success: #059669; --danger: #dc2626; --warn: #d97706;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: 'Pretendard', -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; user-select: none; -webkit-font-smoothing: antialiased; overscroll-behavior: none; }
+  .wrap { max-width: 600px; margin: 0 auto; padding: 16px; padding-bottom: 100px; }
+  
+  h2 { font-size: 20px; font-weight: 800; margin-top: 0; color: #1e293b; }
+  .subtitle { color: var(--text-muted); font-size: 14px; margin-bottom: 20px; }
+
+  .view { display: none; animation: fadeIn 0.15s ease-out; }
+  .view.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+
+  .grid-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid-buttons.chambers { grid-template-columns: 1fr; }
+  .big-btn {
+    background: white; border: 2px solid var(--primary); color: var(--primary);
+    padding: 24px 10px; border-radius: 16px; font-size: 22px; font-weight: 800;
+    text-align: center; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  }
+  .big-btn:active { transform: scale(0.98); background: var(--primary-light); }
+
+  .list-item {
+    background: white; border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px; margin-bottom: 12px; display: flex; gap: 12px; cursor: pointer;
+  }
+  .shortx-badge {
+    background: var(--primary-light); color: var(--primary-dark); padding: 6px 12px; 
+    border-radius: 8px; font-weight: 800; font-size: 18px; display: flex; align-items: center; justify-content: center; min-width: 80px; white-space: nowrap;
+  }
+  .list-info h3 { margin: 0 0 6px 0; font-size: 15px; font-weight: 700; word-break: break-all;}
+  .list-info p { margin: 0; color: var(--text-muted); font-size: 13px; font-family: monospace; }
+
+  .detail-card { background: white; border-radius: 16px; padding: 20px; border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+  .img-box { width: 100%; height: 200px; background: #f1f5f9; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; overflow: hidden; border: 1px solid var(--border); }
+  .img-box img { width: 100%; height: 100%; object-fit: contain; }
+  .detail-header { text-align: center; margin-bottom: 20px; }
+  .detail-header .shortx { font-size: 28px; font-weight: 900; color: var(--primary); margin-bottom: 4px;}
+  .detail-header .loc { font-size: 18px; font-weight: 700; color: #475569; background: #e2e8f0; display: inline-block; padding: 4px 12px; border-radius: 6px;}
+
+  .input-group { margin-bottom: 16px; }
+  .input-group label { display: block; font-size: 13px; font-weight: 800; color: var(--text-muted); margin-bottom: 6px; }
+  .input-group input { width: 100%; padding: 14px; border: 2px solid var(--border); border-radius: 10px; font-size: 18px; font-weight: 700; text-align: center; }
+  
+  .share-area { display: none; margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--border); animation: fadeIn 0.2s; }
+
+  /* === 스캔 검증 영역 === */
+  .verify-area {
+    margin-bottom: 14px;
+    padding: 12px;
+    background: #fff7ed;
+    border: 1.5px solid #fed7aa;
+    border-radius: 10px;
+  }
+  .verify-area.ok {
+    background: #ecfdf5; border-color: #6ee7b7;
+  }
+  .verify-area.fail {
+    background: #fef2f2; border-color: #fca5a5;
+  }
+  .verify-label {
+    font-size: 13px; font-weight: 800; color: #9a3412;
+    margin-bottom: 8px; letter-spacing: 0.02em;
+  }
+  .verify-area.ok .verify-label { color: #065f46; }
+  .verify-area.fail .verify-label { color: #991b1b; }
+  .verify-status {
+    font-size: 14px; font-weight: 700; margin-bottom: 10px;
+    padding: 8px 10px; background: white; border-radius: 6px;
+    border: 1px solid rgba(0,0,0,0.06);
+  }
+  .verify-status .ok-text { color: var(--success); }
+  .verify-status .fail-text { color: var(--danger); }
+  .verify-status .pending-text { color: var(--text-muted); }
+  .verify-status code { font-family: 'JetBrains Mono', monospace; font-size: 13px; background: #f1f5f9; padding: 1px 6px; border-radius: 3px; }
+
+  #verify-reader {
+    width: 100%; min-height: 220px; background: #000;
+    border-radius: 8px; overflow: hidden; margin-bottom: 8px;
+    border: 1px solid var(--border);
+    display: none;
+  }
+  #verify-reader.active { display: block; }
+  #verify-reader video { border-radius: 7px; }
+
+  .verify-cam-controls {
+    display: none; gap: 6px; margin-bottom: 8px;
+  }
+  .verify-cam-controls.active { display: flex; }
+  .verify-cam-controls button {
+    flex: 1; padding: 9px; background: white; border: 1px solid var(--border);
+    border-radius: 8px; font-size: 13px; font-weight: 700; color: var(--text); cursor: pointer;
+  }
+  .verify-cam-controls button.danger { background: var(--danger); color: white; border-color: var(--danger); }
+
+  .verify-manual {
+    display: flex; gap: 6px; margin-bottom: 8px;
+  }
+  .verify-manual input {
+    flex: 1; padding: 10px 12px; border: 1px solid var(--border);
+    border-radius: 8px; font-size: 14px; outline: none; text-align: left;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .verify-manual input:focus { border-color: var(--primary); }
+  .verify-manual button {
+    padding: 0 16px; background: var(--primary); color: white;
+    border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px;
+  }
+
+  .verify-start-btn {
+    width: 100%; padding: 12px;
+    background: var(--primary); color: white;
+    border: none; border-radius: 8px;
+    font-size: 14px; font-weight: 800; cursor: pointer;
+  }
+  .verify-area.ok .verify-start-btn { background: var(--success); }
+
+  .snap-btn { width: 100%; padding: 12px; background: #faf5ff; border: 1.5px dashed #c4b5fd; border-radius: 10px; font-size: 14px; font-weight: 700; color: #6b21a8; cursor: pointer; text-align: center; }
+  .snap-btn.has-photo { border-style: solid; background: #ede9fe; }
+  .snap-preview { margin-top: 8px; border-radius: 8px; overflow: hidden; display: none; border: 1px solid #e9d5ff; }
+  .snap-preview img { width: 100%; display: block; max-height: 200px; object-fit: contain; background: #000; }
+  .memo-input { width: 100%; padding: 12px; margin-top: 8px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; text-align: left; }
+
+  .action-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 16px; border-top: 1px solid var(--border); display: flex; gap: 12px; justify-content: center; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); }
+  .action-bar button { flex: 1; max-width: 300px; padding: 16px; border: none; border-radius: 12px; font-size: 18px; font-weight: 800; color: white; cursor: pointer; }
+  .action-bar button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-empty { background: var(--success); }
+  .btn-save { background: var(--danger); }
+
+  .back-btn { display: inline-block; padding: 8px 16px; margin-bottom: 16px; background: white; border: 1px solid var(--border); border-radius: 8px; font-weight: 700; color: var(--text-muted); cursor: pointer; }
+  #loading { text-align: center; padding: 40px; font-size: 18px; font-weight: 700; color: var(--primary); }
+  .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 12px 24px; border-radius: 30px; font-weight: 700; opacity: 0; transition: opacity 0.2s; z-index: 9999; max-width: 90%; text-align: center; }
+  .toast.show { opacity: 1; }
+  .toast.success { background: var(--success); }
+  .toast.danger { background: var(--danger); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div id="view-loading" class="view active"><div id="loading">데이터 불러오는 중...⏳</div></div>
+  
+  <div id="view-chamber" class="view">
+    <h2>🏢 챔버 선택</h2>
+    <div class="grid-buttons chambers" id="chamber-list"></div>
+  </div>
+  
+  <div id="view-zone" class="view">
+    <button class="back-btn" onclick="showChamber()">← 챔버 다시 선택</button>
+    <h2 id="zone-subtitle"></h2>
+    <div class="grid-buttons" id="zone-list"></div>
+  </div>
+  
+  <div id="view-list" class="view">
+    <button class="back-btn" onclick="showZone(currentChamber)">← 존 다시 선택</button>
+    <h2>📝 <span id="list-title-zone" style="color:var(--primary)"></span> 조사 목록</h2>
+    <div id="item-list"></div>
+  </div>
+
+  <div id="view-detail" class="view">
+    <button class="back-btn" onclick="showList(currentZone)">← 목록으로</button>
+    <div class="detail-card">
+      <div class="img-box" id="detail-img"></div>
+      <div class="detail-header">
+        <div class="shortx" id="detail-shortx"></div>
+        <div class="loc" id="detail-loc"></div>
+      </div>
+      <h3 style="margin: 0 0 4px 0; font-size: 16px;" id="detail-name"></h3>
+      <p style="color: var(--text-muted); font-size: 14px; margin: 0 0 20px 0;" id="detail-code"></p>
+
+      <div class="input-group">
+        <label>실물 수량 (수정)</label>
+        <input type="number" id="detail-qty" value="0" min="0" 
+               onfocus="this.value=''" 
+               onblur="if(this.value==='') this.value='0'; checkChanges();" 
+               oninput="checkChanges()">
+      </div>
+      <div class="input-group">
+        <label>확인된 날짜</label>
+        <input type="date" id="detail-date" onchange="checkChanges()">
+      </div>
+
+      <div class="share-area" id="share-area">
+
+        <!-- ★ 스캔 검증 영역 (필수) -->
+        <div class="verify-area" id="verify-area">
+          <div class="verify-label">
+            🔍 상품코드 스캔 확인 <span style="color:var(--danger)">*필수</span>
+          </div>
+          <div class="verify-status" id="verify-status">
+            <span class="pending-text">⏳ 아직 스캔 안 됨 — 실물의 바코드를 스캔하세요</span>
+          </div>
+
+          <div id="verify-reader"></div>
+
+          <div class="verify-cam-controls" id="verify-cam-controls">
+            <button onclick="stopVerifyCam()" class="danger">⏸ 정지</button>
+            <button onclick="flipVerifyCam()">🔄 카메라 전환</button>
+          </div>
+
+          <div class="verify-manual" id="verify-manual">
+            <input type="text" id="verify-manual-input" placeholder="수동 입력 (스캔 어려울 때)" 
+                   onkeypress="if(event.key==='Enter')verifyManualSubmit()">
+            <button onclick="verifyManualSubmit()">확인</button>
+          </div>
+
+          <button class="verify-start-btn" id="verify-start-btn" onclick="startVerifyCam()">📷 카메라로 스캔 시작</button>
+        </div>
+
+        <!-- 현장 사진 -->
+        <label style="font-size:13px;font-weight:800;color:var(--text-muted);display:block;margin-bottom:6px;">📸 현장 사진 (선택)</label>
+        <input type="file" accept="image/*" capture="environment" id="snap-input" hidden onchange="onSnapPicked(event)">
+        <div class="snap-btn" id="snap-btn" onclick="document.getElementById('snap-input').click()">📸 촬영하기 (선택)</div>
+        <div class="snap-preview" id="snap-preview"><img id="snap-img"></div>
+        <input type="text" class="memo-input" id="detail-memo" placeholder="슬랙에 남길 메모 (선택)">
+      </div>
+    </div>
+
+    <div class="action-bar">
+      <button class="btn-empty" id="btn-empty" onclick="processItem(false)">✅ 0개 맞음 (넘어가기)</button>
+      <button class="btn-save" id="btn-save" onclick="processItem(true)" style="display:none;" disabled>🚨 수정됨 (저장 & 공유)</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- html5-qrcode 라이브러리 -->
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<script>
+  // ==========================================
+  // ⚠️ 여기에 GAS 웹앱 /exec URL 넣어주세요
+  // (Apps Script → 배포 → 새 배포 → 웹앱 → '모든 사용자' 액세스)
+  // ==========================================
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbyosXem0m_SEfSsuJ3R4tBNJ8qWQThFld6sswUX3s6g3xzacDUKRabMWgnQJcVDIGHo/exec';
+
+  let rawData = []; let zoneItems = [];
+  let currentChamber = '', currentZone = '', currentIndex = 0;
+  let originalDate = '', originalQty = 0, snapBase64 = '';
+
+  // 스캔 검증 상태
+  let verifyState = 'pending'; // pending | ok | fail
+  let verifiedCode = '';        // 실제 스캔된 코드 (검증 통과 시)
+  let html5QrCode = null;
+  let camRunning = false;
+  let currentFacing = 'environment';
+  let lastScan = '', lastScanTime = 0;
+  const COOLDOWN_MS = 1500;
+  const WORKER_KEY = 'worker_name_v1';
+
+  // ---------- GAS 호출 헬퍼 ----------
+  async function callGas(action, payload) {
+    try {
+      const res = await fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: action, ...(payload || {}) })
+        // Content-Type 생략 → text/plain 으로 simple request, CORS preflight 회피
+      });
+      return await res.json();
+    } catch (e) {
+      return { error: '네트워크 오류: ' + e.message };
+    }
+  }
+
+  // ---------- 초기 로드 ----------
+  window.onload = function() {
+    callGas('getZeroStockData').then(res => {
+      if (res.error) { alert(res.error); return; }
+      rawData = res.data || [];
+      showChamber();
+    });
+  };
+
+  function switchView(viewId) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(viewId).classList.add('active');
+    window.scrollTo(0, 0);
+  }
+
+  function showChamber() {
+    const chambers = [...new Set(rawData.map(d => d.chamber))].sort();
+    document.getElementById('chamber-list').innerHTML = chambers.length ? 
+      chambers.map(c => `<button class="big-btn" onclick="showZone('${c}')">${c}</button>`).join('') :
+      '<div style="text-align:center; padding: 20px;">🎉 0개 조사 끝!</div>';
+    switchView('view-chamber');
+  }
+
+  function showZone(chamber) {
+    currentChamber = chamber;
+    const zones = [...new Set(rawData.filter(d => d.chamber === chamber).map(d => d.zone))].sort();
+    document.getElementById('zone-subtitle').innerText = chamber;
+    document.getElementById('zone-list').innerHTML = zones.map(z => `<button class="big-btn" onclick="showList('${z}')">${z}</button>`).join('');
+    switchView('view-zone');
+  }
+
+  function showList(zone) {
+    currentZone = zone;
+    document.getElementById('list-title-zone').innerText = zone;
+    zoneItems = rawData.filter(d => d.zone === zone).sort((a, b) => 
+      a.location === b.location ? a.shortx.localeCompare(b.shortx) : a.location.localeCompare(b.location)
+    );
+    if (zoneItems.length === 0) { alert("해당 존 완료!"); return showZone(currentChamber); }
+
+    document.getElementById('item-list').innerHTML = zoneItems.map((item, idx) => `
+      <div class="list-item" onclick="openDetail(${idx})">
+        <div class="shortx-badge">${escapeHtml(item.shortx) || '-'}</div>
+        <div class="list-info">
+          <h3>${escapeHtml(item.prodName)}</h3>
+          <p>${escapeHtml(item.prodCode)} | ${escapeHtml(item.location)}</p>
+        </div>
+      </div>
+    `).join('');
+    switchView('view-list');
+  }
+
+  function openDetail(index) {
+    currentIndex = index;
+    const item = zoneItems[currentIndex];
+    document.getElementById('detail-img').innerHTML = item.imgUrl ? `<img src="${escapeAttr(item.imgUrl)}">` : '📷';
+    document.getElementById('detail-shortx').innerText = item.shortx || '숏X 없음';
+    document.getElementById('detail-loc').innerText = `📍 ${item.location}`;
+    document.getElementById('detail-name').innerText = item.prodName;
+    document.getElementById('detail-code').innerText = item.prodCode;
+    
+    document.getElementById('detail-qty').value = item.qty || 0;
+    originalQty = item.qty || 0;
+    let d = item.expDate || item.mfgDate || '';
+    document.getElementById('detail-date').value = d;
+    originalDate = d;
+
+    // 사진 / 메모 / 검증 상태 초기화
+    snapBase64 = '';
+    document.getElementById('detail-memo').value = '';
+    document.getElementById('snap-preview').style.display = 'none';
+    document.getElementById('snap-btn').className = 'snap-btn';
+    document.getElementById('snap-btn').innerText = '📸 촬영하기 (선택)';
+
+    resetVerify();
+    stopVerifyCam();   // 이전 화면에 카메라 켜져 있을 수 있으니 정리
+
+    checkChanges();
+    switchView('view-detail');
+  }
+
+  function checkChanges() {
+    const currentQty = parseInt(document.getElementById('detail-qty').value) || 0;
+    const currentDate = document.getElementById('detail-date').value;
+    const isChanged = (currentQty > 0 || currentDate !== originalDate);
+    
+    document.getElementById('btn-empty').style.display = isChanged ? 'none' : 'block';
+    document.getElementById('btn-save').style.display = isChanged ? 'block' : 'none';
+    document.getElementById('share-area').style.display = isChanged ? 'block' : 'none';
+
+    // 변경 안 됐으면 카메라 끄기 (배터리/리소스)
+    if (!isChanged && camRunning) stopVerifyCam();
+
+    updateSaveBtnEnabled();
+  }
+
+  function updateSaveBtnEnabled() {
+    // 변경됨 + 검증 통과했을 때만 활성화
+    const btn = document.getElementById('btn-save');
+    const currentQty = parseInt(document.getElementById('detail-qty').value) || 0;
+    const currentDate = document.getElementById('detail-date').value;
+    const isChanged = (currentQty > 0 || currentDate !== originalDate);
+    btn.disabled = !(isChanged && verifyState === 'ok');
+  }
+
+  // ========== 스캔 검증 로직 ==========
+  function resetVerify() {
+    verifyState = 'pending';
+    verifiedCode = '';
+    const area = document.getElementById('verify-area');
+    area.classList.remove('ok', 'fail');
+    document.getElementById('verify-status').innerHTML = 
+      '<span class="pending-text">⏳ 아직 스캔 안 됨 — 실물의 바코드를 스캔하세요</span>';
+    document.getElementById('verify-start-btn').innerText = '📷 카메라로 스캔 시작';
+    document.getElementById('verify-start-btn').style.display = 'block';
+    document.getElementById('verify-manual-input').value = '';
+    updateSaveBtnEnabled();
+  }
+
+  function checkScanMatch(scanned) {
+    const item = zoneItems[currentIndex];
+    if (!item) return false;
+    const targets = [item.prodCode, item.scanCode]
+      .map(s => String(s || '').trim().toUpperCase())
+      .filter(Boolean);
+    const s = String(scanned || '').trim().toUpperCase();
+    if (!s) return false;
+    return targets.indexOf(s) !== -1;
+  }
+
+  function handleVerifyResult(scanned) {
+    // 진동 피드백
+    if (navigator.vibrate) navigator.vibrate(60);
+
+    const matched = checkScanMatch(scanned);
+    const area = document.getElementById('verify-area');
+    const status = document.getElementById('verify-status');
+
+    if (matched) {
+      verifyState = 'ok';
+      verifiedCode = String(scanned).trim().toUpperCase();
+      area.classList.remove('fail');
+      area.classList.add('ok');
+      status.innerHTML = '<span class="ok-text">✅ 확인 완료 — <code>' + escapeHtml(verifiedCode) + '</code></span>';
+      document.getElementById('verify-start-btn').innerText = '🔄 다시 스캔';
+      stopVerifyCam();
+      showToast('✅ 상품코드 확인됨', 'success');
+    } else {
+      verifyState = 'fail';
+      area.classList.remove('ok');
+      area.classList.add('fail');
+      const item = zoneItems[currentIndex];
+      status.innerHTML = '<span class="fail-text">❌ 다른 상품! — 스캔된 코드: <code>' + 
+        escapeHtml(String(scanned).trim()) + '</code><br>예상 코드: <code>' + 
+        escapeHtml(item.prodCode) + '</code>' +
+        (item.scanCode && item.scanCode !== item.prodCode ? ' / <code>' + escapeHtml(item.scanCode) + '</code>' : '') +
+        '</span>';
+      if (navigator.vibrate) navigator.vibrate([100, 60, 100]);
+      showToast('❌ 코드 불일치 — 다시 확인하세요', 'danger');
+    }
+    updateSaveBtnEnabled();
+  }
+
+  function startVerifyCam() {
+    if (camRunning) return;
+    if (!html5QrCode) html5QrCode = new Html5Qrcode('verify-reader');
+
+    const reader = document.getElementById('verify-reader');
+    const controls = document.getElementById('verify-cam-controls');
+    reader.classList.add('active');
+    controls.classList.add('active');
+
+    const config = {
+      fps: 10,
+      qrbox: function(w, h) {
+        const minEdge = Math.min(w, h);
+        return { width: Math.floor(minEdge * 0.85), height: Math.floor(minEdge * 0.45) };
+      },
+      aspectRatio: 1.333,
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.QR_CODE,
+        Html5QrcodeSupportedFormats.ITF
+      ]
+    };
+
+    html5QrCode.start(
+      { facingMode: currentFacing },
+      config,
+      function(decodedText) { onVerifyScan(decodedText); },
+      function(_) { /* per-frame errors ignored */ }
+    ).then(function() {
+      camRunning = true;
+      document.getElementById('verify-start-btn').style.display = 'none';
+    }).catch(function(err) {
+      reader.classList.remove('active');
+      controls.classList.remove('active');
+      showToast('카메라 시작 실패: ' + err, 'danger');
+    });
+  }
+
+  function stopVerifyCam() {
+    const reader = document.getElementById('verify-reader');
+    const controls = document.getElementById('verify-cam-controls');
+    if (!html5QrCode || !camRunning) {
+      reader.classList.remove('active');
+      controls.classList.remove('active');
+      return;
+    }
+    html5QrCode.stop().then(function() {
+      camRunning = false;
+      reader.classList.remove('active');
+      controls.classList.remove('active');
+      // 시작 버튼 다시 노출 (성공 후엔 "다시 스캔" 텍스트로)
+      document.getElementById('verify-start-btn').style.display = 'block';
+    }).catch(function() {
+      camRunning = false;
+      reader.classList.remove('active');
+      controls.classList.remove('active');
+    });
+  }
+
+  function flipVerifyCam() {
+    if (!camRunning) {
+      currentFacing = (currentFacing === 'environment') ? 'user' : 'environment';
+      showToast('전환됨: ' + (currentFacing === 'environment' ? '후면' : '전면'));
+      return;
+    }
+    stopVerifyCam();
+    setTimeout(function() {
+      currentFacing = (currentFacing === 'environment') ? 'user' : 'environment';
+      startVerifyCam();
+    }, 400);
+  }
+
+  function onVerifyScan(code) {
+    const now = Date.now();
+    if (code === lastScan && (now - lastScanTime) < COOLDOWN_MS) return;
+    lastScan = code;
+    lastScanTime = now;
+    handleVerifyResult(code);
+  }
+
+  function verifyManualSubmit() {
+    const v = document.getElementById('verify-manual-input').value.trim();
+    if (!v) { showToast('코드를 입력하세요', 'danger'); return; }
+    document.getElementById('verify-manual-input').value = '';
+    handleVerifyResult(v);
+  }
+
+  // ========== 현장 사진 ==========
+  function onSnapPicked(e) {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const img = new Image();
+      img.onload = function() {
+        let w = img.width, h = img.height; const maxSide = 1200;
+        if (w > h && w > maxSide) { h = Math.round(h * maxSide / w); w = maxSide; }
+        else if (h >= w && h > maxSide) { w = Math.round(w * maxSide / h); h = maxSide; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        snapBase64 = canvas.toDataURL('image/jpeg', 0.7);
+        
+        document.getElementById('snap-img').src = snapBase64;
+        document.getElementById('snap-preview').style.display = 'block';
+        document.getElementById('snap-btn').className = 'snap-btn has-photo';
+        document.getElementById('snap-btn').innerText = '🔄 다시 찍기';
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // ========== 저장 / 공유 ==========
+  function processItem(hasPhysicalStock) {
+    const item = zoneItems[currentIndex];
+    const newQty = parseInt(document.getElementById('detail-qty').value) || 0;
+    const newDate = document.getElementById('detail-date').value;
+
+    // 수정됨인데 검증 안 됐으면 차단 (이중 안전장치)
+    if (hasPhysicalStock && verifyState !== 'ok') {
+      showToast('상품코드 스캔 확인을 먼저 해주세요', 'danger');
+      return;
+    }
+    
+    const payload = {
+      rowIndex: item.rowIndex,
+      hasPhysicalStock: hasPhysicalStock,
+      qty: newQty,
+      isDateChanged: (newDate !== originalDate),
+      newDate: newDate,
+      snapBase64: snapBase64,
+      memo: document.getElementById('detail-memo').value.trim(),
+      scanVerified: hasPhysicalStock ? (verifyState === 'ok') : false,
+      scannedCode: hasPhysicalStock ? verifiedCode : '',
+      worker: getWorker(),
+      itemInfo: {
+        code: item.prodCode,
+        name: item.prodName,
+        zone: item.zone,
+        loc: item.location,
+        shortCode: item.shortx,
+        img: item.imgUrl
+      }
+    };
+
+    // Optimistic UI - 카메라 정리하고 다음 항목으로
+    stopVerifyCam();
+    showToast(hasPhysicalStock ? "백그라운드 전송 중..." : "✅ 확인 완료");
+    rawData = rawData.filter(d => d.rowIndex !== item.rowIndex);
+    zoneItems = zoneItems.filter(d => d.rowIndex !== item.rowIndex);
+    
+    if (currentIndex < zoneItems.length) {
+      openDetail(currentIndex);
+    } else if (zoneItems.length > 0) {
+      currentIndex = zoneItems.length - 1;
+      openDetail(currentIndex);
+    } else {
+      showToast("🎉 해당 존 완료!");
+      showZone(currentChamber);
+    }
+
+    // 백그라운드 전송 (fire-and-forget)
+    callGas('updateInvestigationItem', { payload: payload }).then(res => {
+      if (res && res.error) {
+        console.error('서버 에러:', res.error);
+        showToast('⚠️ 서버 에러: ' + res.error, 'danger');
+      }
+    }).catch(err => {
+      console.error('네트워크 에러:', err);
+      showToast('⚠️ 네트워크 에러', 'danger');
+    });
+  }
+
+  // ========== 작업자 (선택) ==========
+  function getWorker() {
+    try { return localStorage.getItem(WORKER_KEY) || ''; } catch (e) { return ''; }
+  }
+
+  // ========== 유틸 ==========
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+  function escapeAttr(s) { return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+  let toastTimer;
+  function showToast(msg, kind) {
+    const t = document.getElementById('toast');
+    t.innerText = msg;
+    t.className = 'toast show' + (kind ? ' ' + kind : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.className = 'toast', 1800);
+  }
+
+  // 페이지 떠날 때 카메라 정리
+  window.addEventListener('beforeunload', function() {
+    if (camRunning && html5QrCode) {
+      try { html5QrCode.stop(); } catch (e) {}
+    }
+  });
+</script>
+</body>
+</html>
