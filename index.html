@@ -149,6 +149,16 @@
 
 <div class="wrap">
   <div id="view-loading" class="view active"><div id="loading">데이터 불러오는 중...⏳</div></div>
+
+<div id="view-login" class="view">
+    <h2 style="text-align: center; margin-top: 40px;">👋 작업자 이름 입력</h2>
+    <div class="input-group" style="margin-top: 20px;">
+      <input type="text" id="worker-name" placeholder="이름을 입력하세요 (예: 홍길동)" onkeypress="if(event.key==='Enter') startApp()">
+    </div>
+    <button class="btn" style="width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 10px; font-weight: 800; font-size: 16px; margin-top: 10px; cursor: pointer;" onclick="startApp()">시작하기</button>
+  </div>
+
+
   
   <div id="view-chamber" class="view">
     <h2>🏢 챔버 선택</h2>
@@ -187,6 +197,16 @@
       </div>
       <div class="input-group">
         <label>확인된 날짜</label>
+
+
+<div style="display: flex; gap: 16px; margin-bottom: 8px;">
+          <label style="display: flex; align-items: center; font-size: 14px; font-weight: 700; color: var(--text);">
+            <input type="radio" name="dateType" value="mfg" onchange="checkChanges()" style="width: auto; margin-right: 6px;"> 제조일
+          </label>
+          <label style="display: flex; align-items: center; font-size: 14px; font-weight: 700; color: var(--text);">
+            <input type="radio" name="dateType" value="exp" onchange="checkChanges()" style="width: auto; margin-right: 6px;"> 기한
+          </label>
+        </div>
         <input type="date" id="detail-date" onchange="checkChanges()">
       </div>
 
@@ -273,14 +293,26 @@
     }
   }
 
-  // ---------- 초기 로드 ----------
+ // ---------- 초기 로드 ----------
   window.onload = function() {
     callGas('getZeroStockData').then(res => {
       if (res.error) { alert(res.error); return; }
       rawData = res.data || [];
-      showChamber();
+      
+      // 로딩 후 로그인 화면 띄우기
+      const savedWorker = localStorage.getItem(WORKER_KEY);
+      if(savedWorker) document.getElementById('worker-name').value = savedWorker;
+      switchView('view-login');
     });
   };
+
+  // [추가] 앱 시작(로그인) 함수
+  function startApp() {
+    const name = document.getElementById('worker-name').value.trim();
+    if(!name) { showToast('이름을 입력해주세요.', 'danger'); return; }
+    localStorage.setItem(WORKER_KEY, name);
+    showChamber(); // 데이터가 이미 있으므로 바로 챔버 선택으로 이동
+  }
 
   function switchView(viewId) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -335,10 +367,21 @@
     
     document.getElementById('detail-qty').value = item.qty || 0;
     originalQty = item.qty || 0;
+
+    
     let d = item.expDate || item.mfgDate || '';
     document.getElementById('detail-date').value = d;
     originalDate = d;
 
+    // [추가] 라디오 버튼 자동 선택
+    if (item.mfgDate && !item.expDate) {
+      document.querySelector('input[name="dateType"][value="mfg"]').checked = true;
+    } else {
+      document.querySelector('input[name="dateType"][value="exp"]').checked = true; // 기본은 기한
+    }
+
+
+    
     // 사진 / 메모 / 검증 상태 초기화
     snapBase64 = '';
     document.getElementById('detail-memo').value = '';
@@ -563,6 +606,9 @@
       showToast('상품코드 스캔 확인을 먼저 해주세요', 'danger');
       return;
     }
+
+const dateTypeObj = document.querySelector('input[name="dateType"]:checked');
+    const selectedDateType = dateTypeObj ? dateTypeObj.value : 'exp';
     
     const payload = {
       rowIndex: item.rowIndex,
@@ -570,6 +616,7 @@
       qty: newQty,
       isDateChanged: (newDate !== originalDate),
       newDate: newDate,
+      dateType: selectedDateType,
       snapBase64: snapBase64,
       memo: document.getElementById('detail-memo').value.trim(),
       scanVerified: hasPhysicalStock ? (verifyState === 'ok') : false,
